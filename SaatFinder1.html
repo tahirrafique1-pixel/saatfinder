@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ساعت ڈیش بورڈ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        :root {
+            --emerald-darker: #064e3b;
+            --emerald-lighter: #059669;
+            --emerald-v-light: #34d399;
+            --dark-red: #991b1b;
+            --light-red: #ef4444;
+            --dark-yellow: #b45309;
+            --bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Noto Nastaliq Urdu', serif; background-color: var(--bg);
+            margin: 0; padding: 20px; direction: rtl;
+        }
+
+        #splash-screen {
+            position: fixed; inset: 0; background: #064e3b;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 5000; color: white; transition: opacity 0.5s;
+        }
+
+        .main-container { max-width: 1200px; margin: auto; padding-top: 20px; }
+        .btn-gear { position: fixed; top: 20px; left: 20px; background: white; border: 1px solid #ddd; width: 45px; height: 45px; border-radius: 12px; cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+
+        .header { text-align: center; margin-bottom: 30px; }
+        #live-clock { font-size: 2.5rem; font-weight: 800; color: #064e3b; }
+
+        .hero-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .hero-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; border-top: 5px solid #059669; }
+
+        .saat-wrapper { display: grid; grid-template-columns: 1fr; gap: 30px; }
+        @media (min-width: 768px) { .saat-wrapper { grid-template-columns: 1fr 1fr; } }
+
+        /* Card styles with white background as requested */
+        .saat-card {
+            background: white; padding: 15px 20px; border-radius: 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px; border: 1px solid #e2e8f0; transition: 0.3s;
+border-right: 5px solid #059669;
+        }
+        
+        /* Text Color Coding based on Saat type */
+        .text-saad { color: var(--emerald-darker); }
+        .text-saad-itisaal { color: var(--emerald-lighter); }
+        .text-saad-infisaal { color: var(--emerald-v-light); }
+        .text-bad { color: var(--dark-red); }
+        .text-nahas { color: var(--light-red); }
+        .text-mumtazij { color: var(--dark-yellow); }
+
+        .saat-card.active { border: 2px solid #059669; background-color: #f0fdf4; transform: scale(1.02); }
+        .saat-name { font-weight: bold; font-size: 1.3rem; }
+        .saat-detail { font-size: 0.85rem; display: block; }
+        .time-val { font-family: sans-serif; font-size: 0.9rem; font-weight: bold; color: #475569; }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 25px; width: 90%; max-width: 450px; text-align: center; }
+        #modal-map { height: 180px; border-radius: 15px; margin: 10px 0; border: 1px solid #ccc; }
+        input, select { width: 100%; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; }
+    </style>
+</head>
+<body onload="initApp()">
+
+    <div id="splash-screen">
+        <h1 style="font-size: 2rem;">ساعت ڈیش بورڈ</h1>
+        <div style="border: 4px solid #f3f3f3; border-top: 4px solid #34d399; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+    </div>
+
+    <button class="btn-gear" onclick="toggleModal(true)">⚙️</button>
+
+    <div class="main-container">
+        <div class="header">
+            <h1 style="margin:0">ساعت ڈیش بورڈ</h1>
+            <div id="live-clock";font-size:1.2rem;>00:00:00</div>
+            <div id="live-date" style="color: #64748b; font-size: 1.1rem;">-- --- ----</div>
+        </div>
+
+        <div class="hero-stats">
+            <div class="hero-card">
+                <h3>طلوع  | غروب</h3>
+                <div id="sunDisplay" style="font-size: 1.4rem; font-weight: bold; color: #064e3b;">--:-- | --:--</div>
+            </div>
+            <div class="hero-card">
+                <h3>موجودہ ساعت </h3>
+                <div id="curNameHero" style="font-weight: bold; font-size: 1.5rem;">--</div>
+                <div id="curCountdown" style="font-size: 1.3rem; font-weight: bold;"></div>
+            </div>
+            <div class="hero-card">
+                <h3>اگلی ساعت کا آغاز</h3>
+                <div id="nextNameHero" style="color: #64748b; font-weight: bold;">--</div>
+<div id="currCountdown" style="font-size: 1.3rem; font-weight: bold;"></div>
+                
+        </div>
+
+        <div class="saat-wrapper">
+            <div><h2 style="text-align:center;">دن کی ساعتیں</h2><div id="dayList"></div></div>
+            <div><h2 style="text-align:center;">رات کی ساعتیں</h2><div id="nightList"></div></div>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <h2 style="margin:0">ترتیبات</h2>
+            <div id="modal-map"></div>
+            <label>عرض بلد (Lat)</label><input type="number" step="any" id="lat">
+            <label>طول بلد (Lon)</label><input type="number" step="any" id="lon">
+            <label>تاریخ</label><input type="date" id="dateInput">
+            <label>ٹائم زون</label><select id="tzSelect"></select>
+            <button onclick="saveSettings()" style="width:100%; padding:15px; background:#064e3b; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; margin-top:10px;">محفوظ کریں</button>
+            <button onclick="toggleModal(false)" style="width:100%; padding:5px; background:none; border:none; color:gray; cursor:pointer;">بند کریں</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map, marker, saatData = [];
+        
+        const saatTableData = {
+            "Sun": { name: "شمس", type: "سعد", class: "text-saad" },
+            "Moon": { name: "قمر", type: "سعد انفصال", class: "text-saad-infisaal" },
+            "Mars": { name: "مریخ", type: "نحس", class: "text-nahas" },
+            "Mercury": { name: "عطارد", type: "ممتزج", class: "text-mumtazij" },
+            "Jupiter": { name: "مشتری", type: "سعد اتصال", class: "text-saad-itisaal" },
+            "Venus": { name: "زہرہ", type: "سعد اتصال", class: "text-saad-itisaal" },
+            "Saturn": { name: "زحل", type: "نحس", class: "text-nahas" }
+        };
+
+        const planetaryOrder = ["Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon"];
+        const dayStartPlanets = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+
+        function initApp() {
+            setTimeout(() => {
+                document.getElementById('splash-screen').style.opacity = '0';
+                setTimeout(() => document.getElementById('splash-screen').style.display = 'none', 500);
+            }, 3000);
+
+            document.getElementById('dateInput').valueAsDate = new Date();
+            const tzSel = document.getElementById('tzSelect');
+            Intl.supportedValuesOf('timeZone').forEach(tz => {
+                let opt = document.createElement('option'); opt.value = tz; opt.text = tz; tzSel.appendChild(opt);
+            });
+            tzSel.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            map = L.map('modal-map').setView([31.3753, 73.3451], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            marker = L.marker([31.3753, 73.3451], {draggable: true}).addTo(map);
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(p => {
+                    const lat = p.coords.latitude; const lon = p.coords.longitude;
+                    document.getElementById('lat').value = lat.toFixed(6);
+                    document.getElementById('lon').value = lon.toFixed(6);
+                    marker.setLatLng([lat, lon]); map.setView([lat, lon], 12);
+                    saveSettings();
+                }, () => saveSettings());
+            }
+        }
+
+        async function saveSettings() {
+            toggleModal(false);
+            const lat = document.getElementById('lat').value || 31.3753;
+            const lon = document.getElementById('lon').value || 73.3451;
+            const date = document.getElementById('dateInput').value;
+            const res = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${date}&formatted=0`);
+            const data = await res.json();
+            
+            const sunrise = new Date(data.results.sunrise);
+            const sunset = new Date(data.results.sunset);
+            document.getElementById('sunDisplay').innerText = 
+                `${sunrise.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})} | ${sunset.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}`;
+            
+            calculateSaats(sunrise, sunset);
+        }
+
+        function calculateSaats(sunrise, sunset) {
+            const dayDur = (sunset - sunrise) / 12;
+            const nightDur = (86400000 - (sunset - sunrise)) / 12;
+            let startPlanet = dayStartPlanets[sunrise.getDay()];
+            let startIndex = planetaryOrder.indexOf(startPlanet);
+
+            saatData = [];
+            let curr = new Date(sunrise);
+            for(let i=0; i<24; i++) {
+                let end = new Date(curr.getTime() + (i < 12 ? dayDur : nightDur));
+                let pKey = planetaryOrder[(startIndex + i) % 7];
+                let info = saatTableData[pKey];
+                saatData.push({ ...info, start: new Date(curr), end: end });
+                curr = end;
+            }
+            renderUI();
+        }
+
+        function renderUI() {
+            const dayL = document.getElementById('dayList'); const nightL = document.getElementById('nightList');
+            dayL.innerHTML = ''; nightL.innerHTML = '';
+            saatData.forEach((s, i) => {
+                const card = `
+                    <div class="saat-card" id="saat-${i}">
+                        <div class="${s.class}">
+                            <span class="saat-name">${s.name}</span>
+                            <span class="saat-detail">(${s.type})</span>
+                        </div>
+                        <div style="text-align:left;">
+                            <div class="time-val">${s.start.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                            <div class="time-val">${s.end.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                        </div>
+                    </div>`;
+                if(i < 12) dayL.innerHTML += card; else nightL.innerHTML += card;
+            });
+        }
+
+        function toggleModal(s) { document.getElementById('settingsModal').style.display = s?'flex':'none'; if(s) setTimeout(()=>map.invalidateSize(),200); }
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString('en-GB');
+            document.getElementById('live-date').innerText = now.toLocaleDateString('ur-PK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            saatData.forEach((s, i) => {
+                const el = document.getElementById(`saat-${i}`);
+                if(now >= s.start && now < s.end) {
+                    el.classList.add('active');
+                    const heroTitle = document.getElementById('curNameHero');
+                    heroTitle.innerText = `${s.name} (${s.type})`;
+                    heroTitle.className = s.class; // Apply same color to hero title
+                    
+                    let diff = Math.floor((s.end - now) / 1000);
+                    document.getElementById('currCountdown').innerText = `${Math.floor(diff/60)}منٹ ${diff%60}سیکنڈ`;
+                    if(saatData[i+1]) {
+                        document.getElementById('nextNameHero').innerText = saatData[i+1].name;
+                        let nDiff = Math.floor((saatData[i+1].start - now) / 60000);
+                        document.getElementById('nextCountdown').innerText =  `${Math.floor(nDiff/60)}منٹ ${nDiff%60}سیکنڈ`;
+//`${nDiff} منٹ`;
+                    }
+                } else { if(el) el.classList.remove('active'); }
+            });
+        }, 1000);
+    </script>
+    <style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
+</body>
+</html>
