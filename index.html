@@ -60,9 +60,38 @@ border-right: 5px solid #059669;
         .saat-name { font-weight: bold; font-size: 1.3rem; }
         .saat-detail { font-size: 0.85rem; display: block; }
         .time-val { font-family: sans-serif; font-size: 0.9rem; font-weight: bold; color: #475569; }
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  
+  /* Add these properties */
+  overflow-y: auto;  /* Makes the modal itself scrollable */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  padding: 16px; /* Prevents content from touching edges */
+  box-sizing: border-box; /* Includes padding in height calculation */
+}
 
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 25px; width: 90%; max-width: 450px; text-align: center; }
+/* Create a container for your modal content */
+.modal-content {
+  background: white;
+  width: 100%; /* Takes full width of modal with padding */
+  max-width: 400px; /* Optional: limits max width on larger screens */
+  margin: auto; /* Centers vertically when content is shorter */
+  padding: 20px;
+  border-radius: 8px;
+  
+  /* If content inside needs scrolling */
+  max-height: 90vh; /* Prevents it from exceeding viewport height */
+  overflow-y: auto; /* Scroll inside content if needed */
+  -webkit-overflow-scrolling: touch;
+}
+        /*.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; }*/
+       /* .modal-content { background: white; padding: 30px; border-radius: 25px; width: 90%; max-width: 450px; text-align: center; }*/
         #modal-map { height: 180px; border-radius: 15px; margin: 10px 0; border: 1px solid #ccc; }
         input, select { width: 100%; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; }
     </style>
